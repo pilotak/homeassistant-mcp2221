@@ -15,29 +15,57 @@ from homeassistant.helpers.reload import async_integration_yaml_config
 from homeassistant.helpers.service import async_register_admin_service
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.const import (
-    CONF_SWITCHES, CONF_NAME, CONF_PIN, CONF_UNIQUE_ID, CONF_DEVICE_ID,
-    SERVICE_RELOAD, Platform)
+    CONF_SWITCHES,
+    CONF_BINARY_SENSORS,
+    CONF_DEVICE_CLASS,
+    CONF_NAME,
+    CONF_SCAN_INTERVAL,
+    CONF_PIN,
+    CONF_ICON,
+    CONF_UNIQUE_ID,
+    CONF_DEVICE_ID,
+    SERVICE_RELOAD,
+    Platform)
+
+from homeassistant.components.binary_sensor import (
+    DEVICE_CLASSES_SCHEMA as BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
+    SCAN_INTERVAL as BINARY_SENSOR_DEFAULT_SCAN_INTERVAL,
+)
 
 from .MCP2221 import MCP2221
 
-from .const import (CONF_DEV, CONF_PID, CONF_VID, DOMAIN, LOGGER)
-
-BINARY_SENSOR_DEFAULT_NAME = "Binary Command Sensor"
-DEFAULT_PAYLOAD_ON = "ON"
-DEFAULT_PAYLOAD_OFF = "OFF"
-CONF_JSON_ATTRIBUTES = "json_attributes"
-SENSOR_DEFAULT_NAME = "Command Sensor"
-CONF_NOTIFIERS = "notifiers"
+from .const import (CONF_DEV, CONF_PID, CONF_VID,
+                    CONF_INVERTED, DOMAIN, LOGGER)
 
 PLATFORM_MAPPING = {
+    CONF_BINARY_SENSORS: Platform.BINARY_SENSOR,
     CONF_SWITCHES: Platform.SWITCH,
 }
 
+BINARY_SENSOR_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_NAME): cv.string,
+        vol.Required(CONF_PIN): vol.All(
+            vol.Coerce(int), vol.Range(min=0, max=4), msg="invalid pin"
+        ),
+        vol.Optional(CONF_UNIQUE_ID): cv.string,
+        vol.Optional(CONF_INVERTED, default=False): cv.boolean,
+        vol.Optional(
+            CONF_SCAN_INTERVAL, default=BINARY_SENSOR_DEFAULT_SCAN_INTERVAL
+        ): vol.All(cv.time_period, cv.positive_timedelta),
+        vol.Optional(CONF_ICON): cv.template,
+        vol.Optional(CONF_DEVICE_CLASS): BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
+    },
+    required=True,
+)
 SWITCH_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_NAME): cv.string,
-        vol.Required(CONF_PIN): cv.positive_int,
+        vol.Required(CONF_PIN): vol.All(
+            vol.Coerce(int), vol.Range(min=0, max=4), msg="invalid pin"
+        ),
         vol.Optional(CONF_UNIQUE_ID): cv.string,
+        vol.Optional(CONF_ICON): cv.template,
     },
     required=True,
 )
@@ -47,6 +75,7 @@ COMBINED_SCHEMA = vol.Schema(
         vol.Optional(CONF_PID, default=0x00DD): cv.positive_int,
         vol.Optional(CONF_DEV, default=0): cv.positive_int,
         vol.Optional(CONF_SWITCHES): [SWITCH_SCHEMA],
+        vol.Optional(CONF_BINARY_SENSORS): [BINARY_SENSOR_SCHEMA],
     }
 )
 CONFIG_SCHEMA = vol.Schema(
@@ -107,7 +136,7 @@ async def async_load_platforms(
         hass.data[DOMAIN][device_id] = device
 
         for platform, platform_config in device_config.items():
-            seen_pins = set()
+            used_pins = set()
 
             # check only platforms, leaving the rest of setting
             if platform in PLATFORM_MAPPING:
@@ -120,10 +149,10 @@ async def async_load_platforms(
                 # check for duplicate pins
                 for item in platform_config:
                     pin = item.get('pin')
-                    if pin in seen_pins:
+                    if pin in used_pins:
                         LOGGER.error("Duplicate pin GP%i", pin)
                         raise ValueError("Duplicate pin found")
-                    seen_pins.add(pin)
+                    used_pins.add(pin)
 
                 # append device index
                 for item in platform_config:

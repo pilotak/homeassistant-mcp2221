@@ -1,12 +1,12 @@
 """MCP2221 switch"""
 
 from datetime import datetime, timedelta
-from typing import Any, cast
 
-from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
+from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import (
     CONF_PIN,
     CONF_NAME,
+    CONF_ICON,
     CONF_UNIQUE_ID,
     CONF_DEVICE_ID
 )
@@ -15,7 +15,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.template import Template
 from homeassistant.helpers.trigger_template_entity import ManualTriggerEntity
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.config_entries import ConfigEntry
 
 from .const import LOGGER, DOMAIN
 from .MCP2221 import MCP2221
@@ -33,13 +32,20 @@ async def async_setup_platform(
     for object_id, switch in enumerate(discovery_info):
         LOGGER.info("Setting up switch: '%s' on pin GP%i",
                     switch.get(CONF_NAME), switch.get(CONF_PIN))
+
+        name: str = Template(switch.get(CONF_NAME, object_id), hass)
+        icon: Template | None = switch.get(CONF_ICON)
+        unique_id: str | None = switch.get(CONF_UNIQUE_ID)
+
         trigger_entity_config = {
-            CONF_UNIQUE_ID: switch.get(CONF_UNIQUE_ID),
-            CONF_NAME: Template(switch.get(CONF_NAME, object_id), hass),
+            CONF_UNIQUE_ID: unique_id,
+            CONF_NAME: name,
+            CONF_ICON: icon
         }
 
         # get MCP2221 instance
-        device_instance = hass.data[DOMAIN].get(switch.get(CONF_DEVICE_ID))
+        device_instance: MCP2221 | None = hass.data[DOMAIN].get(
+            switch.get(CONF_DEVICE_ID))
 
         if not isinstance(device_instance, MCP2221):
             LOGGER.error("No instance of MCP2221")
@@ -62,12 +68,11 @@ class MCP2221Switch(ManualTriggerEntity, SwitchEntity):
     def __init__(
         self,
         config: ConfigType,
-        device: Any,
+        device: MCP2221,
         pin: int
     ) -> None:
         """Initialize the switch."""
         super().__init__(self.hass, config)
-        self._device_class = SwitchDeviceClass.SWITCH
         self._device = device
         self._pin = pin
         self._state = False
