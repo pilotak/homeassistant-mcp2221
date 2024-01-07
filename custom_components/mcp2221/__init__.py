@@ -17,6 +17,7 @@ from homeassistant.helpers.typing import ConfigType
 from homeassistant.const import (
     CONF_SWITCHES,
     CONF_BINARY_SENSORS,
+    CONF_SENSORS,
     CONF_DEVICE_CLASS,
     CONF_NAME,
     CONF_SCAN_INTERVAL,
@@ -24,6 +25,7 @@ from homeassistant.const import (
     CONF_ICON,
     CONF_UNIQUE_ID,
     CONF_DEVICE_ID,
+    CONF_UNIT_OF_MEASUREMENT,
     SERVICE_RELOAD,
     Platform)
 
@@ -31,22 +33,52 @@ from homeassistant.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA as BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
     SCAN_INTERVAL as BINARY_SENSOR_DEFAULT_SCAN_INTERVAL,
 )
+from homeassistant.components.sensor import (
+    DEVICE_CLASSES_SCHEMA as SENSOR_DEVICE_CLASSES_SCHEMA,
+    SCAN_INTERVAL as SENSOR_DEFAULT_SCAN_INTERVAL,
+)
 
 from .MCP2221 import MCP2221
 
 from .const import (CONF_DEV, CONF_PID, CONF_VID,
-                    CONF_INVERTED, DOMAIN, LOGGER)
+                    CONF_INVERTED, CONF_ADC_REF, CONF_ADC, DOMAIN, LOGGER)
 
 PLATFORM_MAPPING = {
+    CONF_ADC: Platform.SENSOR,
     CONF_BINARY_SENSORS: Platform.BINARY_SENSOR,
     CONF_SWITCHES: Platform.SWITCH,
 }
+
+SENSOR_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_NAME): cv.string,
+        vol.Required(CONF_PIN): vol.All(
+            vol.Coerce(int), vol.Range(min=1, max=3), msg="invalid pin"
+        ),
+        vol.Optional(CONF_UNIQUE_ID): cv.string,
+        vol.Optional(
+            CONF_SCAN_INTERVAL, default=SENSOR_DEFAULT_SCAN_INTERVAL
+        ): vol.All(cv.time_period, cv.positive_timedelta),
+        vol.Optional(CONF_ICON): cv.template,
+        vol.Optional(CONF_DEVICE_CLASS): SENSOR_DEVICE_CLASSES_SCHEMA,
+        vol.Optional(CONF_UNIT_OF_MEASUREMENT): cv.string,
+    },
+    required=True,
+)
+
+ADC_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_ADC_REF): vol.In(["VDD", 1.024, 2.048, 4.096]),
+        vol.Required(CONF_SENSORS): [SENSOR_SCHEMA],
+    },
+    required=True,
+)
 
 BINARY_SENSOR_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_NAME): cv.string,
         vol.Required(CONF_PIN): vol.All(
-            vol.Coerce(int), vol.Range(min=0, max=4), msg="invalid pin"
+            vol.Coerce(int), vol.Range(min=0, max=3), msg="invalid pin"
         ),
         vol.Optional(CONF_UNIQUE_ID): cv.string,
         vol.Optional(CONF_INVERTED, default=False): cv.boolean,
@@ -58,17 +90,19 @@ BINARY_SENSOR_SCHEMA = vol.Schema(
     },
     required=True,
 )
+
 SWITCH_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_NAME): cv.string,
         vol.Required(CONF_PIN): vol.All(
-            vol.Coerce(int), vol.Range(min=0, max=4), msg="invalid pin"
+            vol.Coerce(int), vol.Range(min=0, max=3), msg="invalid pin"
         ),
         vol.Optional(CONF_UNIQUE_ID): cv.string,
         vol.Optional(CONF_ICON): cv.template,
     },
     required=True,
 )
+
 COMBINED_SCHEMA = vol.Schema(
     {
         vol.Optional(CONF_VID, default=0x04D8): cv.positive_int,
@@ -76,8 +110,10 @@ COMBINED_SCHEMA = vol.Schema(
         vol.Optional(CONF_DEV, default=0): cv.positive_int,
         vol.Optional(CONF_SWITCHES): [SWITCH_SCHEMA],
         vol.Optional(CONF_BINARY_SENSORS): [BINARY_SENSOR_SCHEMA],
+        vol.Optional(CONF_ADC): ADC_SCHEMA
     }
 )
+
 CONFIG_SCHEMA = vol.Schema(
     {
         DOMAIN: vol.All(
@@ -147,15 +183,15 @@ async def async_load_platforms(
                 )
 
                 # check for duplicate pins
-                for item in platform_config:
+                for item in (platform_config if platform != CONF_ADC else platform_config.get(CONF_SENSORS)):
                     pin = item.get('pin')
+
                     if pin in used_pins:
                         LOGGER.error("Duplicate pin GP%i", pin)
                         raise ValueError("Duplicate pin found")
                     used_pins.add(pin)
 
-                # append device index
-                for item in platform_config:
+                    # append device index
                     item[CONF_DEVICE_ID] = device_id
 
                 platforms.append(PLATFORM_MAPPING.get(platform))

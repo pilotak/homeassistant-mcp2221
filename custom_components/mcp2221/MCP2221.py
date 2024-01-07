@@ -1,4 +1,5 @@
 from .const import LOGGER
+import random
 
 test = 0
 
@@ -19,3 +20,10 @@ class MCP2221:
         global test  # Reference the global variable
         test = 1 if test == 0 else 0
         return test
+
+    def ReadADC(self, pin: int):
+        LOGGER.info("read ADC%i", pin)
+        return random.randrange(0, 1023)
+
+    def SetADCVoltageReference(self, type):
+        LOGGER.info("ADC ref: %s", type)

@@ -2,9 +2,9 @@
 
 from datetime import timedelta
 
-from homeassistant.components.binary_sensor import (
-    BinarySensorDeviceClass,
-    BinarySensorEntity,
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
 )
 from homeassistant.const import (
     CONF_PIN,
@@ -13,19 +13,28 @@ from homeassistant.const import (
     CONF_DEVICE_ID,
     CONF_ICON,
     CONF_DEVICE_CLASS,
-    CONF_SCAN_INTERVAL
+    CONF_SCAN_INTERVAL,
+    CONF_UNIT_OF_MEASUREMENT,
+    CONF_SENSORS
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.template import Template
 from homeassistant.helpers.trigger_template_entity import ManualTriggerEntity
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.template import Template
 
-from .const import (CONF_INVERTED, LOGGER, DOMAIN)
+from .const import (LOGGER, DOMAIN, CONF_ADC_REF)
 from .MCP2221 import MCP2221
 
 SCAN_INTERVAL = timedelta(seconds=10)
+
+TRIGGER_ENTITY_OPTIONS = (
+    CONF_DEVICE_CLASS,
+    CONF_ICON,
+    CONF_UNIQUE_ID,
+    CONF_UNIT_OF_MEASUREMENT,
+)
 
 
 async def async_setup_platform(
@@ -35,53 +44,51 @@ async def async_setup_platform(
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Setup switches."""
-    binary_sensors = []
+    sensors = []
 
-    for binary_sensor in discovery_info:
-        LOGGER.info("Setting up binary_sensor: '%s' on pin GP%i",
-                    binary_sensor.get(CONF_NAME), binary_sensor.get(CONF_PIN))
+    LOGGER.info("%s", discovery_info)
 
-        name: str = binary_sensor.get(CONF_NAME)
-        device_class: BinarySensorDeviceClass | None = binary_sensor.get(
-            CONF_DEVICE_CLASS
-        )
-        icon: Template | None = binary_sensor.get(CONF_ICON)
-        unique_id: str | None = binary_sensor.get(CONF_UNIQUE_ID)
-        scan_interval: timedelta = binary_sensor.get(
+    for object_id, sensor in enumerate(discovery_info.get(CONF_SENSORS)):
+        LOGGER.info("Setting up sensor: '%s' on pin GP%i",
+                    sensor.get(CONF_NAME), sensor.get(CONF_PIN))
+
+        name: str = Template(sensor.get(CONF_NAME, object_id), hass)
+        scan_interval: timedelta = sensor.get(
             CONF_SCAN_INTERVAL, SCAN_INTERVAL
         )
-        pin: int = binary_sensor.get(CONF_PIN)
-        inverted: bool = binary_sensor.get(CONF_INVERTED)
+        pin: int = sensor.get(CONF_PIN)
 
-        trigger_entity_config = {
-            CONF_UNIQUE_ID: unique_id,
-            CONF_NAME: Template(name, hass),
-            CONF_DEVICE_CLASS: device_class,
-            CONF_ICON: icon,
-        }
+        trigger_entity_config = {CONF_NAME: name}
+        for key in TRIGGER_ENTITY_OPTIONS:
+            if key not in sensor:
+                continue
+            trigger_entity_config[key] = sensor.get(key)
 
         # get MCP2221 instance
         device_instance: MCP2221 | None = hass.data[DOMAIN].get(
-            binary_sensor.get(CONF_DEVICE_ID))
+            sensor.get(CONF_DEVICE_ID))
 
         if not isinstance(device_instance, MCP2221):
             LOGGER.error("No instance of MCP2221")
             return
 
-        binary_sensors.append(
-            MCP2221BinarySensor(
+        # set ADC reference
+        device_instance.SetADCVoltageReference(
+            discovery_info.get(CONF_ADC_REF))
+
+        sensors.append(
+            MCP2221Sensor(
                 trigger_entity_config,
                 device_instance,
                 pin,
-                inverted,
                 scan_interval
             )
         )
 
-    async_add_entities(binary_sensors)
+    async_add_entities(sensors)
 
 
-class MCP2221BinarySensor(ManualTriggerEntity, BinarySensorEntity):
+class MCP2221Sensor(ManualTriggerEntity, SensorEntity):
     """Representation of a switch."""
 
     def __init__(
@@ -89,16 +96,14 @@ class MCP2221BinarySensor(ManualTriggerEntity, BinarySensorEntity):
         config: ConfigType,
         device: MCP2221,
         pin: int,
-        inverted: bool,
         scan_interval: timedelta,
     ) -> None:
         """Initialize the switch."""
         super().__init__(self.hass, config)
         self._device = device
         self._pin = pin
-        self._inverted = inverted
         self._scan_interval = scan_interval
-        self._state = False
+        self.value = None
 
         # init GP
         self._device.InitGP(pin, 2)
@@ -116,12 +121,10 @@ class MCP2221BinarySensor(ManualTriggerEntity, BinarySensorEntity):
         )
 
     @property
-    def is_on(self):
-        if self._inverted:
-            return 1 if self._state == 0 else 0
-        return self._state
+    def native_value(self) -> int:
+        return self.value
 
     def update(self):
-        """Update state."""
-        self._state = self._device.ReadGP(self._pin)
+        """Update value."""
+        self.value = self._device.ReadADC(self._pin)
         self.async_write_ha_state()

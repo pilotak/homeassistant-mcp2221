@@ -9,7 +9,7 @@ LOGGER = logging.getLogger(__package__)
 
 PLATFORMS = [
     Platform.BINARY_SENSOR,
-    # Platform.SENSOR,
+    Platform.SENSOR,
     Platform.SWITCH,
 ]
 
@@ -20,3 +20,5 @@ CONF_VID = "vid"
 CONF_PID = "pid"
 CONF_DEV = "dev"
 CONF_INVERTED = "inverted"
+CONF_ADC_REF = "ref"
+CONF_ADC = "adc"
