@@ -1,0 +1,12 @@
+{
+  "domain": "mcp2221",
+  "name": "MCP2221",
+  "codeowners": ["@pilotak"],
+  "config_flow": false,
+  "dependencies": [],
+  "documentation": "https://github.com/pilotak/homeassistant-mcp2221",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/pilotak/homeassistant-mcp2221/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

@@ -1,0 +1,29 @@
+name: Validate
+
+on:
+  push:
+    paths-ignore:
+      - "README.md"
+      - "info.md"
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: Checkout
+        uses: "actions/checkout@v2"
+      
+      - name: Check conventional commits
+        uses: webiny/action-conventional-commits@v1.2.0
+
+      - name: Check PEP8
+        uses: quentinguidee/pep8-action@v1
+
+      - name: HACS validation
+        uses: hacs/action@main
+        with:
+          category: integration
+
+      - name: HASSFEST
+        uses: home-assistant/actions/hassfest@master
