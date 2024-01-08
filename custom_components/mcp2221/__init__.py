@@ -140,7 +140,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if not reload_config:
             LOGGER.warn("Nothing to reload")
             return
-        await async_load_platforms(hass, reload_config.get(DOMAIN, []), reload_config)
+        await async_load_platforms(hass, reload_config.get(DOMAIN, []),
+                                   reload_config)
 
     async_register_admin_service(hass, DOMAIN, SERVICE_RELOAD, _reload_config)
 
@@ -183,7 +184,8 @@ async def async_load_platforms(
                 )
 
                 # check for duplicate pins
-                for item in (platform_config if platform != CONF_ADC else platform_config.get(CONF_SENSORS)):
+                for item in (platform_config if platform != CONF_ADC else
+                             platform_config.get(CONF_SENSORS)):
                     pin = item.get('pin')
 
                     if pin in used_pins:
