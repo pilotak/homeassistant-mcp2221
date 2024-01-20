@@ -1,0 +1,19 @@
+{
+  "domain": "mcp2221",
+  "name": "MCP2221",
+  "codeowners": ["@pilotak"],
+  "config_flow": false,
+  "dependencies": [],
+  "documentation": "https://github.com/pilotak/homeassistant-mcp2221",
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/pilotak/homeassistant-mcp2221/issues",
+  "requirements": ["mcp2221~=1.1"],
+  "version": "1.0.0",
+  "usb": [
+    {
+      "vid": "1240",
+      "pid": "221"
+    }
+  ]
+}
