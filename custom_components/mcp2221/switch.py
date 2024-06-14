@@ -75,7 +75,7 @@ class MCP2221Switch(ManualTriggerEntity, SwitchEntity):
         self._pin = pin
 
         # init GP
-        prev_state = False
+        self._state = prev_state = False
 
         if self._device.GetGPType(self._pin) == MCP2221.TYPE.OUTPUT:
             prev_state = bool(self._device.ReadGP(self._pin))
