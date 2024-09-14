@@ -42,10 +42,11 @@ async def async_setup_platform(
         }
 
         # get MCP2221 instance
+
         device_instance: MCP2221.MCP2221() | None = hass.data[DOMAIN].get(
             switch.get(CONF_DEVICE_ID))
 
-        if not isinstance(device_instance, MCP2221.MCP2221):
+        if not isinstance(device_instance["device"], MCP2221.MCP2221):
             LOGGER.error("No instance of MCP2221")
             return
 
@@ -71,13 +72,15 @@ class MCP2221Switch(ManualTriggerEntity, SwitchEntity):
     ) -> None:
         """Initialize the switch."""
         super().__init__(self.hass, config)
-        self._device = device
+        self._device = device["device"]
+        self._lock = device["lock"]
         self._pin = pin
 
         # init GP
         self._state = prev_state = False
 
         if self._device.GetGPType(self._pin) == MCP2221.TYPE.OUTPUT:
+            # if already an output init prev state directly
             prev_state = bool(self._device.ReadGP(self._pin))
             self._state = prev_state
 
@@ -91,20 +94,22 @@ class MCP2221Switch(ManualTriggerEntity, SwitchEntity):
     def is_on(self):
         return self._state
 
-    def turn_on(self, **kwargs):
+    async def turn_on(self, **kwargs):
         LOGGER.info("Turn on GP%i", self._pin)
         try:
-            self._device.WriteGP(self._pin, 1)
-            self._state = True
+            async with self._lock:
+                self._device.WriteGP(self._pin, 1)
+                self._state = True
         except OSError:
             LOGGER.error("Device not available")
             self._state = None
 
-    def turn_off(self, **kwargs):
+    async def turn_off(self, **kwargs):
         LOGGER.info("Turn off GP%i", self._pin)
         try:
-            self._device.WriteGP(self._pin, 0)
-            self._state = False
+            async with self._lock:
+                self._device.WriteGP(self._pin, 0)
+                self._state = False
         except OSError:
             LOGGER.error("Device not available")
             self._state = None

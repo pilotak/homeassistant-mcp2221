@@ -5,7 +5,6 @@
 # HomeAssistant MCP2221 integration
 
 [![validate](https://github.com/pilotak/homeassistant-mcp2221/actions/workflows/validate.yaml/badge.svg)](https://github.com/pilotak/homeassistant-mcp2221/actions/workflows/validate.yaml)
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
 
 Integration that adds missing GPIOs (input, output, ADC) to your NUC or Proxmox-based installation over USB.
 
