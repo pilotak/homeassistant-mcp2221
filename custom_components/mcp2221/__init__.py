@@ -177,6 +177,7 @@ async def async_load_platforms(
         try:
             device = MCP2221.MCP2221(device_config.get(
                 "vid"), device_config.get("pid"), device_config.get("dev"))
+
         except IndexError:
             LOGGER.error("Error opening MCP2221 device")
             return
@@ -184,7 +185,10 @@ async def async_load_platforms(
         if DOMAIN not in hass.data:
             hass.data[DOMAIN] = {}
 
-        hass.data[DOMAIN][device_id] = device
+        hass.data[DOMAIN][device_id] = {
+            "device": device,
+            "lock": asyncio.Lock()
+        }
 
         for platform, platform_config in device_config.items():
             used_pins = set()

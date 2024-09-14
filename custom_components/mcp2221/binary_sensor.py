@@ -59,7 +59,7 @@ async def async_setup_platform(
         device_instance: MCP2221.MCP2221() | None = hass.data[DOMAIN].get(
             binary_sensor.get(CONF_DEVICE_ID))
 
-        if not isinstance(device_instance, MCP2221.MCP2221):
+        if not isinstance(device_instance["device"], MCP2221.MCP2221):
             LOGGER.error("No instance of MCP2221")
             return
 
@@ -91,7 +91,8 @@ class MCP2221BinarySensor(ManualTriggerEntity, BinarySensorEntity):
     ) -> None:
         """Initialize the binary sensor."""
         super().__init__(self.hass, config)
-        self._device = device
+        self._device = device["device"]
+        self._lock = device["lock"]
         self._pin = pin
         self._inverted = inverted
         self._scan_interval = interval
@@ -119,12 +120,13 @@ class MCP2221BinarySensor(ManualTriggerEntity, BinarySensorEntity):
             return 1 if self._state == 0 else 0
         return self._state
 
-    def _update_state(self, now: datetime | None = None) -> None:
+    async def _update_state(self, now: datetime | None = None) -> None:
         """Update value."""
         try:
-            self._state = self._device.ReadGP(self._pin)
+            async with self._lock:
+                self._state = self._device.ReadGP(self._pin)
         except OSError:
             LOGGER.error("Device not available")
             self._state = None
 
-        self.async_write_ha_state()
+        self.schedule_update_ha_state()

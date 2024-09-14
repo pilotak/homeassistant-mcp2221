@@ -71,7 +71,7 @@ async def async_setup_platform(
         device_instance: MCP2221.MCP2221() | None = hass.data[DOMAIN].get(
             sensor.get(CONF_DEVICE_ID))
 
-        if not isinstance(device_instance, MCP2221.MCP2221):
+        if not isinstance(device_instance["device"], MCP2221.MCP2221):
             LOGGER.error("No instance of MCP2221")
             return
 
@@ -86,7 +86,7 @@ async def async_setup_platform(
         elif conf_ref == 4.096:
             ref = MCP2221.VRM.REF_4_096V
 
-        device_instance.SetADCVoltageReference(ref)
+        device_instance["device"].SetADCVoltageReference(ref)
 
         sensors.append(
             MCP2221Sensor(
@@ -119,7 +119,8 @@ class MCP2221Sensor(ManualTriggerEntity, RestoreSensor):
     ) -> None:
         """Initialize the sensor."""
         ManualTriggerSensorEntity.__init__(self, hass, config)
-        self._device = device
+        self._device = device["device"]
+        self._lock = device["lock"]
         self._pin = pin
         self._scan_interval = scan_interval
         self._value_template = value_template
@@ -145,21 +146,24 @@ class MCP2221Sensor(ManualTriggerEntity, RestoreSensor):
             ),
         )
 
-    def _update_state(self, now: datetime | None = None) -> None:
+    async def _update_state(self, now: datetime | None = None) -> None:
         """Update value."""
 
         try:
-            value = self._device.ReadADC(self._pin)
+            async with self._lock:
+                value = self._device.ReadADC(self._pin)
         except OSError:
             LOGGER.error("Device not available")
             value = None
 
         # apply value template
         if self._value_template is not None and value is not None:
-            self._attr_native_value = self._value_template.render(
-                parse_result=False, value=value)
+            self._attr_native_value = (
+                self._value_template.async_render_with_possible_json_value(
+                    value=value, parse_result=False)
+            )
 
         else:
             self._attr_native_value = value
 
-        self.async_write_ha_state()
+        self.schedule_update_ha_state()
