@@ -127,4 +127,4 @@ class MCP2221BinarySensor(ManualTriggerEntity, BinarySensorEntity):
             LOGGER.error("Device not available")
             self._state = None
 
-        self.async_write_ha_state()
+        self.schedule_update_ha_state()
