@@ -1,5 +1,6 @@
 """MCP2221 sensor"""
 
+from asyncio import Lock
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -68,7 +69,7 @@ async def async_setup_platform(
             trigger_entity_config[key] = sensor.get(key)
 
         # get MCP2221 instance
-        device_instance: MCP2221.MCP2221() | None = hass.data[DOMAIN].get(
+        device_instance = hass.data[DOMAIN].get(
             sensor.get(CONF_DEVICE_ID))
 
         if not isinstance(device_instance["device"], MCP2221.MCP2221):
@@ -113,14 +114,14 @@ class MCP2221Sensor(ManualTriggerEntity, RestoreSensor):
         hass: HomeAssistant,
         config: ConfigType,
         value_template: Template | None,
-        device: MCP2221,
+        device,
         pin: int,
         scan_interval: timedelta,
     ) -> None:
         """Initialize the sensor."""
         ManualTriggerSensorEntity.__init__(self, hass, config)
-        self._device = device["device"]
-        self._lock = device["lock"]
+        self._device: MCP2221.MCP2221 = device["device"]
+        self._lock: Lock = device["lock"]
         self._pin = pin
         self._scan_interval = scan_interval
         self._value_template = value_template

@@ -1,5 +1,6 @@
 """MCP2221 switch"""
 
+from asyncio import Lock
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import (
     CONF_PIN,
@@ -43,7 +44,7 @@ async def async_setup_platform(
 
         # get MCP2221 instance
 
-        device_instance: MCP2221.MCP2221() | None = hass.data[DOMAIN].get(
+        device_instance = hass.data[DOMAIN].get(
             switch.get(CONF_DEVICE_ID))
 
         if not isinstance(device_instance["device"], MCP2221.MCP2221):
@@ -67,13 +68,13 @@ class MCP2221Switch(ManualTriggerEntity, SwitchEntity):
     def __init__(
         self,
         config: ConfigType,
-        device: MCP2221,
+        device,
         pin: int
     ) -> None:
         """Initialize the switch."""
         super().__init__(self.hass, config)
-        self._device = device["device"]
-        self._lock = device["lock"]
+        self._device: MCP2221.MCP2221 = device["device"]
+        self._lock: Lock = device["lock"]
         self._pin = pin
 
         # init GP
