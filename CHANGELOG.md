@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/pilotak/homeassistant-mcp2221/compare/v1.1.0...v1.1.1) (2024-12-21)
+
+
+### Bug Fixes
+
+* async switch ([c1daa17](https://github.com/pilotak/homeassistant-mcp2221/commit/c1daa17dc7953c3f1212b5d80010e2dd08571c2c))
+
 ## [1.1.0](https://github.com/pilotak/homeassistant-mcp2221/compare/v1.0.1...v1.1.0) (2024-09-14)
 
 
