@@ -94,7 +94,7 @@ class MCP2221Switch(ManualTriggerEntity, SwitchEntity):
     def is_on(self):
         return self._state
 
-    async def turn_on(self, **kwargs):
+    async def async_turn_on(self, **kwargs):
         LOGGER.info("Turn on GP%i", self._pin)
         try:
             async with self._lock:
@@ -104,7 +104,9 @@ class MCP2221Switch(ManualTriggerEntity, SwitchEntity):
             LOGGER.error("Device not available")
             self._state = None
 
-    async def turn_off(self, **kwargs):
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs):
         LOGGER.info("Turn off GP%i", self._pin)
         try:
             async with self._lock:
@@ -113,3 +115,5 @@ class MCP2221Switch(ManualTriggerEntity, SwitchEntity):
         except OSError:
             LOGGER.error("Device not available")
             self._state = None
+
+        self.async_write_ha_state()
