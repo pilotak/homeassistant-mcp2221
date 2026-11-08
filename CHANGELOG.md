@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/pilotak/homeassistant-mcp2221/compare/v1.1.1...v1.1.2) (2026-11-08)
+
+
+### Bug Fixes
+
+* correct USB vid/pid in manifest to hex ([0ce49bd](https://github.com/pilotak/homeassistant-mcp2221/commit/0ce49bddf237f414abceb665210610c63ec76c2a))
+
 ## [1.1.1](https://github.com/pilotak/homeassistant-mcp2221/compare/v1.1.0...v1.1.1) (2024-12-21)
 
 
